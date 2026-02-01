@@ -127,8 +127,32 @@ Resources:
         - Key: Name
           Value: ai-iac-demo-web-1
 
+  WebInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          dnf -y update
+          dnf -y install nginx
+          systemctl enable nginx
+          echo "Hello from web-2 $(hostname)" > /usr/share/nginx/html/index.html
+          systemctl start nginx
+      Tags:
+        - Key: Name
+          Value: ai-iac-demo-web-2
+
 Outputs:
   VpcId:
     Value: !Ref VPC
   Web1PublicIp:
     Value: !GetAtt WebInstance1.PublicIp
+
+  Web2PublicIp:
+    Value: !GetAtt WebInstance2.PublicIp

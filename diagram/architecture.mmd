@@ -12,9 +12,9 @@ flowchart TB
 
     subgraph Pub2["Public Subnet (ap-northeast-1c) 10.0.2.0/24"]
       direction TB
-      Note2["（予備）"]
-
+      EC2B["🖥️ EC2 (nginx) #2"]
     end
   end
 
   ALB --> EC2A
+  ALB --> EC2B
