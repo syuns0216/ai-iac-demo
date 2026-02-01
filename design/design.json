@@ -17,6 +17,13 @@
   "web": {
     "instanceType": "t3.micro",
     "instances": 2,
+<<<<<<< HEAD
     "server": "nginx"
+=======
+    "subnet": "10.0.2.0"
+  },
+  "web": {
+    "instances": 2
+>>>>>>> origin/master
   }
 }
