@@ -54,13 +54,22 @@ def main() -> int:
                 run(["git", "push", "-u", "origin", "HEAD"])
 
             # PR: 既存があればURLを表示、なければ作成
+                        # PR: ブランチを指定して「そのPR」を確実に取得する
             current_branch = os.popen("git branch --show-current").read().strip()
+
+            # まず「このブランチのPRがあるか」検索してURLを取る
+            pr_url = ""
             try:
-                # 既存PRがあるかチェック（あればURLが出る）
-                run(["gh", "pr", "view", "--web"])
-                print("\n既存PRを開きました（内容更新済みならそのPRをレビューしてください）")
-            except subprocess.CalledProcessError:
-                # 無ければ作成
+                # --head でブランチ指定して1件取る（なければ空）
+                pr_url = os.popen(f"gh pr list --head {current_branch} --json url --jq '.[0].url'").read().strip()
+            except Exception:
+                pr_url = ""
+
+            if pr_url:
+                print(f"\n既存PR: {pr_url}")
+                run(["gh", "pr", "view", pr_url, "--web"])
+            else:
+                # 無ければ作成してURLを取る
                 run([
                     "gh", "pr", "create",
                     "--base", "master",
@@ -68,7 +77,11 @@ def main() -> int:
                     "--title", "AI flow: update IaC",
                     "--body", "Generated from design.json via Gemini dialog. Please review."
                 ])
-                print("\n新規PRを作成しました。")
+                pr_url = os.popen(f"gh pr list --head {current_branch} --json url --jq '.[0].url'").read().strip()
+                print(f"\n新規PR: {pr_url}")
+                if pr_url:
+                    run(["gh", "pr", "view", pr_url, "--web"])
+
 
             print("\nGO完了: PRレビュー → マージでAWSへ反映（既存のGO②フロー）")
             continue
