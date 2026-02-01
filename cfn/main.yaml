@@ -68,9 +68,6 @@ Resources:
       CidrBlock: !Ref PublicSubnet1Cidr
       AvailabilityZone: !Ref Az1
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: ai-iac-demo-public-1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -79,9 +76,6 @@ Resources:
       CidrBlock: !Ref PublicSubnet2Cidr
       AvailabilityZone: !Ref Az2
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: ai-iac-demo-public-2
 
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -111,8 +105,7 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       SubnetId: !Ref PublicSubnet1
-      SecurityGroupIds:
-        - !Ref WebSecurityGroup
+      SecurityGroupIds: [!Ref WebSecurityGroup]
       ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
       UserData:
         Fn::Base64: !Sub |
@@ -149,8 +142,6 @@ Resources:
           Value: ai-iac-demo-web-2
 
 Outputs:
-  VpcId:
-    Value: !Ref VPC
   Web1PublicIp:
     Value: !GetAtt WebInstance1.PublicIp
 
