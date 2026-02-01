@@ -1,0 +1,6 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "ai-iac-demo minimal stack (S3 bucket)"
+
+Resources:
+  DemoBucket:
+    Type: AWS::S3::Bucket
