@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "ai-iac-demo network baseline (VPC + public subnets + IGW + routes)"
+Description: "ai-iac-demo: VPC baseline + EC2 (nginx)"
 
 Parameters:
   VpcCidr:
@@ -17,6 +17,9 @@ Parameters:
   Az2:
     Type: AWS::EC2::AvailabilityZone::Name
     Default: ap-northeast-1c
+  InstanceType:
+    Type: String
+    Default: t3.micro
 
 Resources:
   VPC:
@@ -92,6 +95,41 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ai-iac-demo-web-sg
+
+  WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          dnf -y update
+          dnf -y install nginx
+          systemctl enable nginx
+          echo "Hello from ai-iac-demo on $(hostname)" > /usr/share/nginx/html/index.html
+          systemctl start nginx
+      Tags:
+        - Key: Name
+          Value: ai-iac-demo-web-1
+
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -99,3 +137,9 @@ Outputs:
     Value: !Ref PublicSubnet1
   PublicSubnet2Id:
     Value: !Ref PublicSubnet2
+  WebInstanceId:
+    Value: !Ref WebInstance
+  WebPublicIp:
+    Value: !GetAtt WebInstance.PublicIp
+  WebUrl:
+    Value: !Sub "http://${WebInstance.PublicIp}"
