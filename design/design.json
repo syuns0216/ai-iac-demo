@@ -1,5 +1,6 @@
 {
   "EC2": {
-    "instances": 2
+    "instances": 3,
+    "subnet": "10.0.2.0"
   }
 }
