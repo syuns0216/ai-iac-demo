@@ -1,7 +1,7 @@
 flowchart TB
-  User[作業者] --> AI[対話型AI]
-  AI --> PR[Pull Request]
-  Boss[上司] --> PR
-  PR --> CICD[GitHub Actions]
-  CICD --> CFN[CloudFormation]
-  CFN --> AWS[AWS Resources]
+  User[作業者/利用者] --> ALB[ALB(後で追加)]
+  ALB --> Web[Webサーバ x1]
+  Web --> VPC[VPC]
+  VPC --> Sub1[Public Subnet 1]
+  VPC --> Sub2[Public Subnet 2]
+  IGW[Internet Gateway] --> VPC

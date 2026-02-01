@@ -1,4 +1,19 @@
-AWSTemplateFormatVersion: "2010-09-09"
+import json
+
+with open("design/design.json", encoding="utf-8") as f:
+    d = json.load(f)
+
+instances = int(d.get("web", {}).get("instances", 1))
+instance_type = d.get("web", {}).get("instanceType", "t3.micro")
+
+# まずは既存の cfn/main.yaml をそのまま使い、
+# "EC2の台数" だけを実現するために、WebInstanceを2台まで生成する簡易版。
+# （この後 ALB 追加のタイミングで本格化します）
+
+# 既存テンプレの「土台＋WebInstance1台」版をベースにしつつ、
+# instances=2のときは WebInstance2 を追加する。
+
+base = f"""AWSTemplateFormatVersion: "2010-09-09"
 Description: "ai-iac-demo: VPC baseline + EC2 (nginx) generated from design.json"
 
 Parameters:
@@ -19,7 +34,7 @@ Parameters:
     Default: ap-northeast-1c
   InstanceType:
     Type: String
-    Default: t3.micro
+    Default: {instance_type}
 
 Resources:
   VPC:
@@ -113,7 +128,7 @@ Resources:
       SubnetId: !Ref PublicSubnet1
       SecurityGroupIds:
         - !Ref WebSecurityGroup
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+      ImageId: !Sub "{{{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}}}"
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
@@ -126,9 +141,48 @@ Resources:
       Tags:
         - Key: Name
           Value: ai-iac-demo-web-1
+"""
 
+extra = ""
+if instances >= 2:
+    extra = """
+  WebInstance2:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet2
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          dnf -y update
+          dnf -y install nginx
+          systemctl enable nginx
+          echo "Hello from web-2 $(hostname)" > /usr/share/nginx/html/index.html
+          systemctl start nginx
+      Tags:
+        - Key: Name
+          Value: ai-iac-demo-web-2
+"""
+
+outputs = """
 Outputs:
   VpcId:
     Value: !Ref VPC
   Web1PublicIp:
     Value: !GetAtt WebInstance1.PublicIp
+"""
+
+if instances >= 2:
+    outputs += """
+  Web2PublicIp:
+    Value: !GetAtt WebInstance2.PublicIp
+"""
+
+with open("cfn/main.yaml", "w", encoding="utf-8") as f:
+    f.write(base + extra + outputs)
+
+print("generated: cfn/main.yaml (instances =", instances, ")")
