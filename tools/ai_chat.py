@@ -21,18 +21,37 @@ with open(DESIGN_PATH, encoding="utf-8") as f:
 req = input("要望を入力: ").strip()
 
 prompt = f"""
-あなたはJSONだけを返すアシスタントです。説明文は禁止。
-次のdesign.jsonを、要望に合わせて更新してください。
+あなたはAWS構成の design.json を更新するアシスタントです。
+出力は **必ず JSONのみ**。説明文や ``` は禁止。
 
-【現在のdesign.json】
+次のスキーマを必ず守ってください（キー名を変えない / キーを消さない）：
+{{
+  "project": "ai-iac-demo",
+  "region": "ap-northeast-1",
+  "network": {{
+    "vpcCidr": "10.0.0.0/16",
+    "publicSubnets": [
+      {{"az":"ap-northeast-1a","cidr":"10.0.1.0/24"}},
+      {{"az":"ap-northeast-1c","cidr":"10.0.2.0/24"}}
+    ]
+  }},
+  "web": {{
+    "instanceType": "t3.micro",
+    "instances": 1,
+    "server": "nginx"
+  }}
+}}
+
+現在のJSON（これをベースに更新）：
 {json.dumps(design, ensure_ascii=False)}
 
-【要望】
+要望：
 {req}
 
-【出力ルール】
-- 出力は必ずJSONのみ
-- 先頭や末尾に説明文や```は付けない
+ルール：
+- 変更が必要な部分だけ値を更新し、それ以外は維持する
+- EC2の台数は必ず web.instances（整数）で表現する（例: 2）
+- EC2 など別キー（"EC2"）は作らない
 """
 
 resp = client.models.generate_content(

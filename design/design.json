@@ -1,6 +1,22 @@
 {
-  "EC2": {
+  "project": "ai-iac-demo",
+  "region": "ap-northeast-1",
+  "network": {
+    "vpcCidr": "10.0.0.0/16",
+    "publicSubnets": [
+      {
+        "az": "ap-northeast-1a",
+        "cidr": "10.0.1.0/24"
+      },
+      {
+        "az": "ap-northeast-1c",
+        "cidr": "10.0.2.0/24"
+      }
+    ]
+  },
+  "web": {
+    "instanceType": "t3.micro",
     "instances": 2,
-    "subnet": "10.0.2.0"
+    "server": "nginx"
   }
 }

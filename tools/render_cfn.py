@@ -1,17 +1,32 @@
-import json
+import json, os
 
-with open("design/design.json", encoding="utf-8") as f:
+DESIGN_PATH = "design/design.json"
+OUT_PATH = "cfn/main.yaml"
+os.makedirs("cfn", exist_ok=True)
+
+with open(DESIGN_PATH, encoding="utf-8") as f:
     d = json.load(f)
 
-instances = int(d.get("web", {}).get("instances", 1))
-instance_type = d.get("web", {}).get("instanceType", "t3.micro")
+# ここが必ず web.instances を拾うように強制
+web = d.get("web", {})
+# 保険：web.instances が無い場合、EC2.instances も拾う
+if "instances" not in web and isinstance(d.get("EC2"), dict) and "instances" in d["EC2"]:
+    web["instances"] = d["EC2"]["instances"]
 
-# まずは既存の cfn/main.yaml をそのまま使い、
-# "EC2の台数" だけを実現するために、WebInstanceを2台まで生成する簡易版。
-# （この後 ALB 追加のタイミングで本格化します）
+instances_raw = web.get("instances", 1)
 
-# 既存テンプレの「土台＋WebInstance1台」版をベースにしつつ、
-# instances=2のときは WebInstance2 を追加する。
+try:
+    instances = int(instances_raw)
+except Exception:
+    # もし "2台" みたいな文字列が来ても数字だけ拾う
+    import re
+    m = re.search(r"\d+", str(instances_raw))
+    instances = int(m.group(0)) if m else 1
+
+instances = max(1, min(instances, 2))  # デモなので 1〜2 台に制限
+instance_type = web.get("instanceType", "t3.micro")
+
+print(f"generated: {OUT_PATH} (instances = {instances})")
 
 base = f"""AWSTemplateFormatVersion: "2010-09-09"
 Description: "ai-iac-demo: VPC baseline + EC2 (nginx) generated from design.json"
@@ -83,9 +98,6 @@ Resources:
       CidrBlock: !Ref PublicSubnet1Cidr
       AvailabilityZone: !Ref Az1
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: ai-iac-demo-public-1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -94,9 +106,6 @@ Resources:
       CidrBlock: !Ref PublicSubnet2Cidr
       AvailabilityZone: !Ref Az2
       MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: ai-iac-demo-public-2
 
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -126,8 +135,7 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       SubnetId: !Ref PublicSubnet1
-      SecurityGroupIds:
-        - !Ref WebSecurityGroup
+      SecurityGroupIds: [!Ref WebSecurityGroup]
       ImageId: !Sub "{{{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}}}"
       UserData:
         Fn::Base64: !Sub |
@@ -151,8 +159,7 @@ if instances >= 2:
     Properties:
       InstanceType: !Ref InstanceType
       SubnetId: !Ref PublicSubnet2
-      SecurityGroupIds:
-        - !Ref WebSecurityGroup
+      SecurityGroupIds: [!Ref WebSecurityGroup]
       ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
       UserData:
         Fn::Base64: !Sub |
@@ -170,8 +177,6 @@ if instances >= 2:
 
 outputs = """
 Outputs:
-  VpcId:
-    Value: !Ref VPC
   Web1PublicIp:
     Value: !GetAtt WebInstance1.PublicIp
 """
@@ -182,7 +187,5 @@ if instances >= 2:
     Value: !GetAtt WebInstance2.PublicIp
 """
 
-with open("cfn/main.yaml", "w", encoding="utf-8") as f:
+with open(OUT_PATH, "w", encoding="utf-8", newline="\n") as f:
     f.write(base + extra + outputs)
-
-print("generated: cfn/main.yaml (instances =", instances, ")")
