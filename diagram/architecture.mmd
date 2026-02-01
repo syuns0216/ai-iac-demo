@@ -1,7 +1,20 @@
 flowchart TB
-  User[作業者/利用者] --> ALB[ALB(後で追加)]
-  ALB --> Web[Webサーバ x1]
-  Web --> VPC[VPC]
-  VPC --> Sub1[Public Subnet 1]
-  VPC --> Sub2[Public Subnet 2]
-  IGW[Internet Gateway] --> VPC
+  User["👤 作業者/利用者"] --> ALB["⚖️ ALB（後で追加）"]
+
+  IGW["🌐 Internet Gateway"] --- VPC
+
+  subgraph VPC["VPC 10.0.0.0/16"]
+    direction TB
+    subgraph Pub1["Public Subnet (ap-northeast-1a) 10.0.1.0/24"]
+      direction TB
+      EC2A["🖥️ EC2 (nginx) #1"]
+    end
+
+    subgraph Pub2["Public Subnet (ap-northeast-1c) 10.0.2.0/24"]
+      direction TB
+      Note2["（予備）"]
+
+    end
+  end
+
+  ALB --> EC2A
