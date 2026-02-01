@@ -1,0 +1,7 @@
+flowchart TB
+  User[作業者] --> AI[対話型AI]
+  AI --> PR[Pull Request]
+  Boss[上司] --> PR
+  PR --> CICD[GitHub Actions]
+  CICD --> CFN[CloudFormation]
+  CFN --> AWS[AWS Resources]
